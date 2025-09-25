@@ -94,12 +94,20 @@ public class Main {
         if (charging != null) {
             System.out.println("Vald charging: " + charging);
         }
+
+
+        elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
+
     }
+
+
 
 
     //Problem, kan inte hämta priser från API:n
     //För att jag aldrig sparar några variabler som kan skickas in för att hämta dem?
     //Önskar tips på omstrukturering...
+
+
 
     public static void printHelp() {
         System.out.println("--Användning av Elpriser API--");
