@@ -3,7 +3,9 @@ package com.example;
 import com.example.api.ElpriserAPI;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.time.format.DateTimeFormatter;
 
@@ -65,6 +67,7 @@ public class Main {
         }
 
         //Validera zone
+        //Ta bort hjälp utskrift senare?
         List<String> validZones = Arrays.asList("SE1", "SE2", "SE3", "SE4");
         if (zone == null || !validZones.contains(zone)) {
             System.out.println("invalid zone, please enter one of the following: SE1, SE2, SE3, SE4");
@@ -74,6 +77,7 @@ public class Main {
         }
 
         //Validera date
+        //Ta bort denna utskrift senare?
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         if (date == null) {
             date = LocalDate.now().format(formatter);
@@ -81,33 +85,87 @@ public class Main {
         } else {
             try {
                 LocalDate parsedDate = LocalDate.parse(date, formatter);
+
                 System.out.println("Valt datum: " + parsedDate);
             } catch (DateTimeParseException e) {
                 System.out.println("invalid date, please enter a valid date");
                 return;
             }
         }
+
+        //Anropar API:n med data/input från användaren
+        List<ElpriserAPI.Elpris> Elpriser = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
+
         if (sorted) {
-            //Skriv ut lista av sorterade priser
-            System.out.println("Här kommer en sorterad lista skrivas ut");
+            //Skriver ut lista av sorterade priser
+            sortPrices(Elpriser);
         }
         if (charging != null) {
+            //Hantera argumentfel/ge felmeddelande vid fel laddningstid ex. --charging 10h
             System.out.println("Vald charging: " + charging);
         }
 
-
-        elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone));
-
+        //Todo: Anropa min/max/medelpris korrekt i programmet,kontrollera att utskrifterna matchar testresultatet
+        //Todo: Skapa metod för att hitta optimal charginghour 2h, 4h, 8h.
+        //Todo: Fixa utskriften av sortPrices!
     }
 
 
+    //Metod för sortering av priser
+    public static void sortPrices(List<ElpriserAPI.Elpris> Elpriser) {
+        List<ElpriserAPI.Elpris> sorteradePriser = new ArrayList<>(Elpriser);
+        sorteradePriser.sort(Comparator.comparingDouble(ElpriserAPI.Elpris::sekPerKWh).reversed());
 
+        DateTimeFormatter hourFormatter = DateTimeFormatter.ofPattern("HH");
 
-    //Problem, kan inte hämta priser från API:n
-    //För att jag aldrig sparar några variabler som kan skickas in för att hämta dem?
-    //Önskar tips på omstrukturering...
+        for (ElpriserAPI.Elpris elpriser : sorteradePriser) {
+            String timeRange = elpriser.timeStart().toLocalTime().format(hourFormatter) + "-" +
+                    elpriser.timeEnd().toLocalTime().format(hourFormatter);
 
+            double orepris = elpriser.sekPerKWh() * 100;
 
+            System.out.printf("%s %05.2f öre\n",
+                    timeRange,orepris);
+        }
+    }
+
+    public static ElpriserAPI.Elpris getMaxPrice(List<ElpriserAPI.Elpris> priser){
+        if (priser == null || priser.isEmpty()){
+            return null;
+        }
+        ElpriserAPI.Elpris max = priser.getFirst();
+        for (ElpriserAPI.Elpris elpris : priser) {
+            if (elpris.sekPerKWh() > max.sekPerKWh()) {
+                max = elpris;
+            }
+        }
+        return max;
+    }
+
+    public static ElpriserAPI.Elpris getMinPrice(List<ElpriserAPI.Elpris> priser){
+        if (priser == null || priser.isEmpty()){
+            return null;
+        }
+        ElpriserAPI.Elpris min = priser.getFirst();
+        for (ElpriserAPI.Elpris elpris : priser){
+            if (elpris.sekPerKWh() < min.sekPerKWh()) {
+                min = elpris;
+            }
+        }
+        return min;
+    }
+
+    public static double getAveragePrice(List<ElpriserAPI.Elpris> priser){
+        if (priser == null || priser.isEmpty()){
+            return 0;
+            //Lägg till throw exception?
+        }
+        double sum = 0.0;
+        for(ElpriserAPI.Elpris elpris : priser){
+            sum += elpris.sekPerKWh();
+        }
+        return sum/priser.size();
+    }
 
     public static void printHelp() {
         System.out.println("--Användning av Elpriser API--");
