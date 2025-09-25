@@ -1,7 +1,6 @@
 package com.example;
 
 import com.example.api.ElpriserAPI;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
@@ -10,9 +9,9 @@ import java.time.format.DateTimeFormatter;
 
 public class Main {
     public static void main(String[] args) {
-
         ElpriserAPI elpriserAPI = new ElpriserAPI();
 
+        //Minnesanteckningar för egen skull
         // --zone SE1|SE2|SE3|SE4 (required)
         // --date YYYY-MM-DD (optional, defaults to current date)
         //--sorted (optional, to display prices in descending order)
@@ -29,13 +28,14 @@ public class Main {
         boolean sorted = false;
         String charging = null;
 
+        //Om inga argument matas in, ge felmeddelande och visa hjälpinfo
         if (args.length == 0) {
             System.out.println("Argument saknas.");
             printHelp();
             return;
         }
 
-        //Loopa genom String argument (args[i])
+        //Loopa genom String argumenten som matas is
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--zone":
@@ -64,7 +64,7 @@ public class Main {
             }
         }
 
-        //
+        //Validera zone
         List<String> validZones = Arrays.asList("SE1", "SE2", "SE3", "SE4");
         if (zone == null || !validZones.contains(zone)) {
             System.out.println("invalid zone, please enter one of the following: SE1, SE2, SE3, SE4");
@@ -73,6 +73,7 @@ public class Main {
             System.out.println("Vald zon: " + zone);
         }
 
+        //Validera date
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         if (date == null) {
             date = LocalDate.now().format(formatter);
@@ -85,18 +86,20 @@ public class Main {
                 System.out.println("invalid date, please enter a valid date");
                 return;
             }
-
         }
         if (sorted) {
             //Skriv ut lista av sorterade priser
+            System.out.println("Här kommer en sorterad lista skrivas ut");
         }
         if (charging != null) {
             System.out.println("Vald charging: " + charging);
         }
-
     }
 
 
+    //Problem, kan inte hämta priser från API:n
+    //För att jag aldrig sparar några variabler som kan skickas in för att hämta dem?
+    //Önskar tips på omstrukturering...
 
     public static void printHelp() {
         System.out.println("--Användning av Elpriser API--");
