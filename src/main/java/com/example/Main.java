@@ -4,6 +4,7 @@ import com.example.api.ElpriserAPI;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.time.format.DateTimeFormatter;
@@ -15,11 +16,8 @@ public class Main {
 
 
         //Minnesanteckningar för egen skull
-        // --zone SE1|SE2|SE3|SE4 (required)
-        // --date YYYY-MM-DD (optional, defaults to current date)
         //--sorted (optional, to display prices in descending order)
         //--charging 2h|4h|8h (optional, to find optimal charging windows)
-        //--help (optional, to display usage information)
 
         String zone = null;
         String date = null;
@@ -28,7 +26,7 @@ public class Main {
 
         System.out.println("--Välkommen till Elpriskollen--");
 
-        //Om inga argument matas in, ge felmeddelande/visa hjälpinfo
+       //Display hjälpinfo vid saknade argument
         if (args.length == 0) {
             System.out.println("Argument saknas.");
             printHelp();
@@ -107,7 +105,7 @@ public class Main {
         String currentDateStr = parsedDate.format(formatter);
         String nextDateStr = nextDay.format(formatter);
 
-        //Skapar ny arraylist innehållandes dagens+morgondagens priser
+        //Arraylist för dagens/morgondagens priser
         List<ElpriserAPI.Elpris> elpriser = new ArrayList<>();
 
         var priserDag1 = elpriserAPI.getPriser(currentDateStr,
@@ -118,7 +116,7 @@ public class Main {
         elpriser.addAll(priserDag1);
         elpriser.addAll(priserDag2);
 
-        //Filtrera för enbart dagens priser
+        //Filtrera ut dagens priser
         List<ElpriserAPI.Elpris> dagensPriser = elpriser.stream()
                 .filter(p -> p.timeStart().toLocalDate().equals(parsedDate)).toList();
 
@@ -148,7 +146,7 @@ public class Main {
             }
 
         } else {
-            //Skriver ut värden för dagens datum+morgondagen
+            //Skriver ut dagens/morgondagens priser
             sortPrices(elpriser);
         }
 
@@ -164,11 +162,21 @@ public class Main {
             try {
                 List<ElpriserAPI.Elpris> optimalChargingWindow = findOptimalChargingWindow(elpriser, timmar);
 
-                System.out.println("Billigaste laddningsfönster (" + timmar + "h):");
+                ElpriserAPI.Elpris forstaTimme = optimalChargingWindow.getFirst();
 
-                double totalPrice = 0.0;
+                LocalDate startDatum = forstaTimme.timeStart().toLocalDate();
+                LocalTime startTime = forstaTimme.timeStart().toLocalTime();
+
                 DateTimeFormatter hourFormatter = DateTimeFormatter.ofPattern("HH");
                 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+                String datumStr = startDatum.format(dateFormatter);
+                String startTidStr = startTime.format(hourFormatter);
+
+                System.out.println("Optimalt laddningsfönster för (" + timmar + "h):");
+                System.out.println("Påbörja laddning " + datumStr + " kl " +startTidStr);
+
+                double totalPrice = 0.0;
 
                 for (ElpriserAPI.Elpris elpris : optimalChargingWindow) {
                     String datum = elpris.timeStart().toLocalDate().format(dateFormatter);
@@ -183,6 +191,7 @@ public class Main {
 
                 double averagePrice = totalPrice / timmar;
                 System.out.printf("Medelpris: %.2f öre\n", averagePrice);
+
             } catch (IllegalArgumentException e) {
                 System.out.println("Fel vid beräkning: " + e.getMessage());
             }
@@ -247,9 +256,8 @@ public class Main {
 
     public static List<ElpriserAPI.Elpris> findOptimalChargingWindow(List<ElpriserAPI.Elpris> elpriser, int timmar) {
         if (elpriser.size() < timmar) {
-            throw new IllegalArgumentException("För få timmar för ett laddningsfönster hittades");
+            throw new IllegalArgumentException("Kunde inte hitta tillräckligt många timmar för ett laddningsfönster");
         }
-
         double mySum = Double.MAX_VALUE;
         int startIndex = 0;
 
@@ -263,7 +271,6 @@ public class Main {
                 startIndex = i;
             }
         }
-
         return elpriser.subList(startIndex, startIndex + timmar);
     }
 
