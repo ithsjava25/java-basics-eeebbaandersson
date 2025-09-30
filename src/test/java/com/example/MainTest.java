@@ -182,7 +182,7 @@ class MainTest {
         // Extract actual lines that match the pattern
         List<String> actualSortedLines = Arrays.stream(output.split("\n"))
                 .map(String::trim) // 1. Trim leading/trailing whitespace
-                .filter(line -> line.matches("^\\d{2}-\\d{2}\\s+\\d+,\\d{2}\\s+öre$")) // 2. Use a more flexible regex
+                .filter(line -> line.matches("\\d{2}-\\d{2}\\s+\\d+,\\d{2}\\s+öre")) // 2. Use a more flexible regex
                 .collect(Collectors.toList());
 
         // Assert that actual lines match expected order

@@ -4,7 +4,9 @@ import com.example.api.ElpriserAPI;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.time.format.DateTimeFormatter;
@@ -12,9 +14,7 @@ import java.time.format.DateTimeFormatter;
 public class Main {
     public static void main(String[] args) {
         ElpriserAPI elpriserAPI = new ElpriserAPI();
-        Locale.setDefault(Locale.of("sv","se"));
-
-        //--charging 2h|4h|8h (optional, to find optimal charging windows)
+        Locale.setDefault(new Locale("sv","se"));
 
         String zone = null;
         String date = null;
@@ -184,7 +184,6 @@ public class Main {
                     System.out.printf("%s %s: %.2f öre\n", datum, timeRange, orepris);
 
                 }
-
                 double averagePrice = totalPrice / timmar;
                 System.out.printf("Medelpris för fönster: %.2f öre\n", averagePrice);
 
@@ -216,8 +215,8 @@ public class Main {
             DecimalFormat df = new DecimalFormat("0.00", symbols);
 
             String formateratPris = df.format(orepris);
-            System.out.printf("%s %s öre\n",
-                    timeRange, formateratPris);
+            System.out.printf("%s %s öre\n", timeRange, formateratPris);
+
         }
     }
 
@@ -251,7 +250,7 @@ public class Main {
 
     public static List<ElpriserAPI.Elpris> findOptimalChargingWindow(List<ElpriserAPI.Elpris> elpriser, int timmar) {
         if (elpriser.size() < timmar) {
-            throw new IllegalArgumentException("Hittade inte tillräckligt många timmar för att ett  skaladdningsfönster");
+            throw new IllegalArgumentException("Hittade inte tillräckligt många timmar för att skapa laddningsfönstret");
         }
         double mySum = Double.MAX_VALUE;
         int startIndex = 0;
@@ -269,6 +268,18 @@ public class Main {
         return elpriser.subList(startIndex, startIndex + timmar);
     }
 
+    //Todo: Metod för att hitta kvartspris
+    public static void testHourlyMinMaxPrices_with96Entries() {
+        double totalSum = 0;
+        for (int hour = 0; hour < 24; hour++) {
+            for (int quarter = 0; quarter < 4; quarter++) {
+                totalSum += (hour * 0.1) + (quarter * 0.01) + 0.10;
+            }
+        }
+        double expectedMean = totalSum / 96;
+
+    }
+
     public static void printHelp() {
         System.out.println("--Användning/usage av Elpriser API--");
         System.out.println("--zone SE1|SE2|SE3|SE4 (Nödvändig)");
@@ -277,5 +288,12 @@ public class Main {
         System.out.println("--charging 2h|4h|8h (Valfritt, hittar optimala laddningsfönstret)");
         System.out.println("--help Valfritt, visar denna hjälpinformation");
     }
+
+    public record Elpris (double sekPerKWh, ZonedDateTime timeStart, ZonedDateTime timeEnd, double quarter) {}
+
 }
+
+
+
+
 
