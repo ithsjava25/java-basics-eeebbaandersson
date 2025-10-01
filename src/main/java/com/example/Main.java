@@ -117,36 +117,34 @@ public class Main {
         List<ElpriserAPI.Elpris> dagensPriser = elpriser.stream()
                 .filter(p -> p.timeStart().toLocalDate().equals(parsedDate)).toList();
 
-        if (dagensPriser.size() == 96) {
-            listWith96Values(dagensPriser);
-        } else {
-            System.out.println("Kan inte visa timpriser, för få datapunkter för dagen.");
-        }
-
 
         if (!sorted) {
-            try {
-                validateElpriserList(dagensPriser);
+            if (dagensPriser.size() == 96){
+                listWith96Values(dagensPriser);
+            } else {
+                try {
+                    validateElpriserList(dagensPriser);
 
-                //Anropar metoder för max/min,medelpris
-                ElpriserAPI.Elpris maxPrice = getMaxPrice(dagensPriser);
-                ElpriserAPI.Elpris minPrice = getMinPrice(dagensPriser);
-                double averagePrice = getAveragePrice(dagensPriser);
+                    //Anropar metoder för max/min,medelpris
+                    ElpriserAPI.Elpris maxPrice = getMaxPrice(dagensPriser);
+                    ElpriserAPI.Elpris minPrice = getMinPrice(dagensPriser);
+                    double averagePrice = getAveragePrice(dagensPriser);
 
-                DateTimeFormatter hourFormatter = DateTimeFormatter.ofPattern("HH");
-                String maxTime = maxPrice.timeStart().toLocalTime().format(hourFormatter) + "-"
-                        + maxPrice.timeEnd().toLocalTime().format(hourFormatter);
+                    DateTimeFormatter hourFormatter = DateTimeFormatter.ofPattern("HH");
+                    String maxTime = maxPrice.timeStart().toLocalTime().format(hourFormatter) + "-"
+                            + maxPrice.timeEnd().toLocalTime().format(hourFormatter);
 
-                String minTime = minPrice.timeStart().toLocalTime().format(hourFormatter) + "-"
-                        + minPrice.timeEnd().toLocalTime().format(hourFormatter);
+                    String minTime = minPrice.timeStart().toLocalTime().format(hourFormatter) + "-"
+                            + minPrice.timeEnd().toLocalTime().format(hourFormatter);
 
-                System.out.printf("Högsta pris: %s %05.2f öre\n", maxTime, maxPrice.sekPerKWh() * 100);
-                System.out.printf("Lägsta pris: %s %05.2f öre\n", minTime, minPrice.sekPerKWh() * 100);
-                System.out.printf("Medelpris: %05.2f öre\n", averagePrice * 100);
+                    System.out.printf("Högsta pris: %s %05.2f öre\n", maxTime, maxPrice.sekPerKWh() * 100);
+                    System.out.printf("Lägsta pris: %s %05.2f öre\n", minTime, minPrice.sekPerKWh() * 100);
+                    System.out.printf("Medelpris: %05.2f öre\n", averagePrice * 100);
 
-            } catch (IllegalArgumentException e) {
-                System.out.println("Ingen data hittades vid hämtning eller beräkning av elpriser");
-                return;
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Ingen data hittades vid hämtning eller beräkning av elpriser");
+                    return;
+                }
             }
 
         } else {
@@ -328,7 +326,6 @@ public class Main {
         System.out.printf("Högsta pris: %s, Pris: %s öre/kWh\n", formatHourRangeMax, formatOreMax);
         System.out.printf("Lägsta pris: %s, Pris: %s öre/kWh\n", formatHourRangeMin, formatOreMin);
         System.out.printf("Medelpris: %s öre/kWh\n", formatOreMedel);
-
 
     }
     
