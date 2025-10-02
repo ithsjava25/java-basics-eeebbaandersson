@@ -195,7 +195,7 @@ public class Main {
             }
         }
     }
-    //Metoder
+
     public static void validateElpriserList(List<ElpriserAPI.Elpris> elpriser) {
         if (elpriser == null || elpriser.isEmpty()) {
             throw new IllegalArgumentException("Fel: Ingen tillgänglig data kunde hittas");
