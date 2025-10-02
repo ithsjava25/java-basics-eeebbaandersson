@@ -29,7 +29,7 @@ public class Main {
             return;
         }
 
-        //Loopa genom String argumenten som matas is
+        //Loopar igenom String argumenten som matas in
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--zone":
@@ -67,7 +67,7 @@ public class Main {
             }
         }
 
-        //Validera zone
+        //Validerar zone
         List<String> validZones = Arrays.asList("SE1", "SE2", "SE3", "SE4");
 
         if (zone == null || !validZones.contains(zone.toUpperCase())) {
@@ -78,7 +78,7 @@ public class Main {
             System.out.println("Vald zon: " + zone);
         }
 
-        //Validera date
+        //Validerar date
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate parsedDate;
 
@@ -112,11 +112,9 @@ public class Main {
         elpriser.addAll(priserDag1);
         elpriser.addAll(priserDag2);
 
-
         //Filtrera ut dagens priser
         List<ElpriserAPI.Elpris> dagensPriser = elpriser.stream()
                 .filter(p -> p.timeStart().toLocalDate().equals(parsedDate)).toList();
-
 
         if (!sorted) {
             if (dagensPriser.size() == 96){
@@ -321,7 +319,6 @@ public class Main {
         //Formatera timmar till 00-01
         String formatHourRangeMin = String.format("%02d-%02d", minPriceHour.timeStart().getHour(), minPriceHour.timeEnd().getHour());
         String formatHourRangeMax = String.format("%02d-%02d", maxPriceHour.timeStart().getHour(), maxPriceHour.timeEnd().getHour());
-
 
         System.out.printf("Högsta pris: %s, Pris: %s öre/kWh\n", formatHourRangeMax, formatOreMax);
         System.out.printf("Lägsta pris: %s, Pris: %s öre/kWh\n", formatHourRangeMin, formatOreMin);
