@@ -2,8 +2,6 @@ package com.example;
 
 import com.example.api.ElpriserAPI;
 
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
@@ -12,6 +10,11 @@ import java.util.*;
 import java.time.format.DateTimeFormatter;
 
 public class Main {
+   private static final DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final List<String> VALID_ZONES = Arrays.asList("SE1", "SE2", "SE3", "SE4");
+
     public static void main(String[] args) {
         ElpriserAPI elpriserAPI = new ElpriserAPI();
         Locale.setDefault(new Locale("sv","se"));
@@ -29,6 +32,7 @@ public class Main {
             return;
         }
 
+        //Todo: Förenkla main-metoden gällande utskrifter/bryt eventuellt ut stycken till nya metoder?
         //Loopar igenom String argumenten som matas in
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -68,9 +72,7 @@ public class Main {
         }
 
         //Validerar zone
-        List<String> validZones = Arrays.asList("SE1", "SE2", "SE3", "SE4");
-
-        if (zone == null || !validZones.contains(zone.toUpperCase())) {
+        if (zone == null || !VALID_ZONES.contains(zone.toUpperCase())) {
             System.out.println("Ogiltig zone. Välj någon av följande: SE1, SE2, SE3, SE4");
             return;
         } else {
@@ -79,17 +81,16 @@ public class Main {
         }
 
         //Validerar date
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate parsedDate;
 
         if (date == null) {
             //Om inget datum angetts, använd dagens
             parsedDate = LocalDate.now();
-            date = parsedDate.format(formatter);
+            date = parsedDate.format(DATE_TIME_FORMATTER);
             System.out.println("Inget datum angavs. Använder dagens datum. " + date);
         } else {
             try {
-                parsedDate = LocalDate.parse(date, formatter);
+                parsedDate = LocalDate.parse(date, DATE_TIME_FORMATTER);
                 System.out.println("Valt datum: " + parsedDate);
             } catch (DateTimeParseException e) {
                 System.out.println("Ogiltigt datum, använd formatet (yyyy-MM-dd).");
@@ -98,10 +99,9 @@ public class Main {
         }
 
         LocalDate nextDay = parsedDate.plusDays(1);
-        String currentDateStr = parsedDate.format(formatter);
-        String nextDateStr = nextDay.format(formatter);
+        String currentDateStr = parsedDate.format(DATE_TIME_FORMATTER);
+        String nextDateStr = nextDay.format(DATE_TIME_FORMATTER);
 
-        //Arraylist för dagens/morgondagens priser
         List<ElpriserAPI.Elpris> elpriser = new ArrayList<>();
 
         var priserDag1 = elpriserAPI.getPriser(currentDateStr,
@@ -120,29 +120,7 @@ public class Main {
             if (dagensPriser.size() == 96){
                 listWith96Values(dagensPriser);
             } else {
-                try {
-                    validateElpriserList(dagensPriser);
-
-                    //Anropar metoder för max/min,medelpris
-                    ElpriserAPI.Elpris maxPrice = getMaxPrice(dagensPriser);
-                    ElpriserAPI.Elpris minPrice = getMinPrice(dagensPriser);
-                    double averagePrice = getAveragePrice(dagensPriser);
-
-                    DateTimeFormatter hourFormatter = DateTimeFormatter.ofPattern("HH");
-                    String maxTime = maxPrice.timeStart().toLocalTime().format(hourFormatter) + "-"
-                            + maxPrice.timeEnd().toLocalTime().format(hourFormatter);
-
-                    String minTime = minPrice.timeStart().toLocalTime().format(hourFormatter) + "-"
-                            + minPrice.timeEnd().toLocalTime().format(hourFormatter);
-
-                    System.out.printf("Högsta pris: %s %05.2f öre\n", maxTime, maxPrice.sekPerKWh() * 100);
-                    System.out.printf("Lägsta pris: %s %05.2f öre\n", minTime, minPrice.sekPerKWh() * 100);
-                    System.out.printf("Medelpris: %05.2f öre\n", averagePrice * 100);
-
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Ingen data hittades vid hämtning eller beräkning av elpriser");
-                    return;
-                }
+                handlePriceStats(dagensPriser);
             }
 
         } else {
@@ -156,36 +134,26 @@ public class Main {
                 return;
             }
             System.out.println("Vald laddningstid: " + charging);
-
             int timmar = Integer.parseInt(charging.replace("h", ""));
 
             try {
                 List<ElpriserAPI.Elpris> optimalChargingWindow = findOptimalChargingWindow(elpriser, timmar);
-
                 ElpriserAPI.Elpris forstaTimme = optimalChargingWindow.getFirst();
 
-                LocalDate startDatum = forstaTimme.timeStart().toLocalDate();
-                LocalTime startTime = forstaTimme.timeStart().toLocalTime();
-
-                DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-                String datumStr = startDatum.format(dateFormatter);
-                String startTidStr = startTime.format(timeFormatter);
+                String datumStr = formatDate(forstaTimme.timeStart().toLocalDate());
+                String startTidStr = formatTime(forstaTimme.timeStart().toLocalTime());
 
                 System.out.printf("Optimalt laddningsfönster: Påbörja laddning %s kl %s\n", datumStr, startTidStr);
 
                 double totalPrice = 0.0;
-
                 for (ElpriserAPI.Elpris elpris : optimalChargingWindow) {
-                    String datum = elpris.timeStart().toLocalDate().format(dateFormatter);
-                    String timeRange = elpris.timeStart().toLocalTime().format(timeFormatter) + "-" +
-                            elpris.timeEnd().toLocalTime().format(timeFormatter);
-                    double orepris = elpris.sekPerKWh() * 100;
-                    totalPrice += orepris;
+                    String datum = formatDate(elpris.timeStart().toLocalDate());
+                    String timeRange = formatTimeRange(elpris);
+                    String pris = formatPrice(elpris.sekPerKWh());
 
-                    System.out.printf("%s %s: %.2f öre\n", datum, timeRange, orepris);
+                    totalPrice += elpris.sekPerKWh() * 100;
 
+                    System.out.printf("%s %s: %s öre\n", datum, timeRange, pris);
                 }
                 double averagePrice = totalPrice / timmar;
                 System.out.printf("Medelpris för fönster: %.2f öre\n", averagePrice);
@@ -194,6 +162,24 @@ public class Main {
                 System.out.println("Fel vid beräkning: " + e.getMessage());
             }
         }
+    }
+
+    private static void handlePriceStats(List<ElpriserAPI.Elpris> elpriser) {
+        try {
+            validateElpriserList(elpriser);
+
+            ElpriserAPI.Elpris maxPrice = getMaxPrice(elpriser);
+            ElpriserAPI.Elpris minPrice = getMinPrice(elpriser);
+            double averagePrice = getAveragePrice(elpriser);
+
+            System.out.printf("Högsta pris: %s %05.2f öre\n", formatTimeRange(maxPrice), maxPrice.sekPerKWh() * 100);
+            System.out.printf("Lägsta pris: %s %05.2f öre\n", formatTimeRange(minPrice), minPrice.sekPerKWh() * 100);
+            System.out.printf("Medelpris: %05.2f öre\n", averagePrice * 100);
+
+        } catch (IllegalArgumentException e) {
+            System.out.println("Ingen data hittades vid hämtning eller beräkning av elpriser");
+        }
+
     }
 
     public static void validateElpriserList(List<ElpriserAPI.Elpris> elpriser) {
@@ -207,19 +193,10 @@ public class Main {
 
         sorteradePriser.sort(Comparator.comparingDouble(ElpriserAPI.Elpris::sekPerKWh).reversed());
 
-        DateTimeFormatter hourFormatter = DateTimeFormatter.ofPattern("HH");
-
         for (ElpriserAPI.Elpris elpris : sorteradePriser) {
-            String timeRange = elpris.timeStart().toLocalTime().format(hourFormatter) + "-" +
-                    elpris.timeEnd().toLocalTime().format(hourFormatter);
-
-            double orepris = elpris.sekPerKWh() * 100.0;
-            DecimalFormatSymbols symbols = new DecimalFormatSymbols(new Locale("sv", "SE"));
-            DecimalFormat df = new DecimalFormat("0.00", symbols);
-
-            String formateratPris = df.format(orepris);
+            String timeRange = formatTimeRange(elpris);
+            String formateratPris = formatPrice(elpris.sekPerKWh() * 100);
             System.out.printf("%s %s öre\n", timeRange, formateratPris);
-
         }
     }
 
@@ -271,8 +248,8 @@ public class Main {
         return elpriser.subList(startIndex, startIndex + timmar);
     }
 
+    //Todo: Se över metod och förenkla så långt det går!
     public static void listWith96Values(List<ElpriserAPI.Elpris> dagensPriser) {
-
         List<Elpris> elpriser = new ArrayList<>();
 
         for (int i = 0; i < 24; i++) {
@@ -320,10 +297,27 @@ public class Main {
         String formatHourRangeMin = String.format("%02d-%02d", minPriceHour.timeStart().getHour(), minPriceHour.timeEnd().getHour());
         String formatHourRangeMax = String.format("%02d-%02d", maxPriceHour.timeStart().getHour(), maxPriceHour.timeEnd().getHour());
 
-        System.out.printf("Högsta pris: %s, Pris: %s öre/kWh\n", formatHourRangeMax, formatOreMax);
-        System.out.printf("Lägsta pris: %s, Pris: %s öre/kWh\n", formatHourRangeMin, formatOreMin);
-        System.out.printf("Medelpris: %s öre/kWh\n", formatOreMedel);
+        System.out.printf("Högsta pris: %s, Pris: %s öre\n", formatHourRangeMax, formatOreMax);
+        System.out.printf("Lägsta pris: %s, Pris: %s öre\n", formatHourRangeMin, formatOreMin);
+        System.out.printf("Medelpris: %s öre\n", formatOreMedel);
 
+    }
+
+    private static String formatTimeRange(ElpriserAPI.Elpris price) {
+        return price.timeStart().toLocalTime().format(HOUR_FORMATTER) + "-" +
+                price.timeEnd().toLocalTime().format(HOUR_FORMATTER);
+    }
+
+    private static String formatDate(LocalDate date) {
+        return date.format(DATE_TIME_FORMATTER);
+    }
+
+    public static String formatTime(LocalTime time) {
+        return time.format(TIME_FORMATTER);
+    }
+
+    private static String formatPrice(double sekPerKWh){
+        return String.format(Locale.forLanguageTag("sv-SE"), "%.2f", sekPerKWh);
     }
     
     public static void printHelp() {
