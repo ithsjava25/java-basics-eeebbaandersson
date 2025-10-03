@@ -16,7 +16,6 @@ public class Main {
     private static final List<String> VALID_ZONES = Arrays.asList("SE1", "SE2", "SE3", "SE4");
 
     public static void main(String[] args) {
-        ElpriserAPI elpriserAPI = new ElpriserAPI();
         Locale.setDefault(new Locale("sv","se"));
 
         String zone = null;
@@ -27,13 +26,13 @@ public class Main {
         System.out.println("--Välkommen till Elpriskollen--");
 
         if (args.length == 0) {
-            System.out.println("Argument saknas.");
+            System.out.println("Saknar argument.");
             printHelp();
             return;
         }
 
         //Todo: Förenkla main-metoden gällande utskrifter/bryt eventuellt ut stycken till nya metoder?
-        //Loopar igenom String argumenten som matas in
+        //Loopar igenom argument från användaren
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--zone":
@@ -82,9 +81,8 @@ public class Main {
 
         //Validerar date
         LocalDate parsedDate;
-
         if (date == null) {
-            //Om inget datum angetts, använd dagens
+            //Om inget datum anges, används dagens
             parsedDate = LocalDate.now();
             date = parsedDate.format(DATE_TIME_FORMATTER);
             System.out.println("Inget datum angavs. Använder dagens datum. " + date);
@@ -102,6 +100,7 @@ public class Main {
         String currentDateStr = parsedDate.format(DATE_TIME_FORMATTER);
         String nextDateStr = nextDay.format(DATE_TIME_FORMATTER);
 
+        ElpriserAPI elpriserAPI = new ElpriserAPI();
         List<ElpriserAPI.Elpris> elpriser = new ArrayList<>();
 
         var priserDag1 = elpriserAPI.getPriser(currentDateStr,
@@ -116,17 +115,25 @@ public class Main {
         List<ElpriserAPI.Elpris> dagensPriser = elpriser.stream()
                 .filter(p -> p.timeStart().toLocalDate().equals(parsedDate)).toList();
 
-        if (!sorted) {
-            if (dagensPriser.size() == 96){
-                listWith96Values(dagensPriser);
-            } else {
-                handlePriceStats(dagensPriser);
-            }
 
-        } else {
+        if (sorted){
             //Skriver ut dagens/morgondagens priser
             sortPrices(elpriser);
+            return;
         }
+
+        if (dagensPriser.size() == 96){
+            handleListWith96Values(dagensPriser);
+        } else {
+            handlePriceStats(dagensPriser);
+        }
+
+        if (charging == null){
+            return;
+        }
+
+
+
 
         if (charging != null) {
             if (!charging.equals("2h") && !charging.equals("4h") && !charging.equals("8h")) {
@@ -249,7 +256,7 @@ public class Main {
     }
 
     //Todo: Se över metod och förenkla så långt det går!
-    public static void listWith96Values(List<ElpriserAPI.Elpris> dagensPriser) {
+    public static void handleListWith96Values(List<ElpriserAPI.Elpris> dagensPriser) {
         List<Elpris> elpriser = new ArrayList<>();
 
         for (int i = 0; i < 24; i++) {
